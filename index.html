@@ -58,23 +58,30 @@ button:disabled{opacity:.5;cursor:default}
 <input type="file" id="importFile" accept=".json" hidden>
 <script>
 const KEY='simGolfLeague.v1';
-const TABS=[['roster','Roster'],['schedule','Schedule'],['scores','Enter Scores'],['board','Leaderboard']];
+// Visitors see the published league (data.json) read-only. Ben edits at this page's address + #admin,
+// then publishes by replacing data.json in the repo. Edits in admin mode never change what visitors see until then.
+const ADMIN=/(^|[#?&])admin\b/.test(location.hash+location.search);
+const TABS=ADMIN?[['roster','Roster'],['schedule','Schedule'],['scores','Enter Scores'],['board','Leaderboard']]
+               :[['board','Leaderboard'],['scores','Results'],['schedule','Schedule'],['roster','Golfers']];
 const TEAM='ABCD';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function fresh(){return{name:'Sim Golf League',players:Array.from({length:8},(_,i)=>({id:'p'+(i+1),name:'Golfer '+(i+1),hcp:0})),subs:[],start:'',weeks:[]};}
-// League data as of Week 1 (Nov 9). Used only when this browser has nothing saved yet.
+// Fallback league data (as of Week 1, Nov 9), used only if data.json can't be loaded, e.g. when opened as a local file.
 const SEED={"name":"Sim Golf League","players":[{"id":"p1","name":"Ben Ambos","hcp":15},{"id":"p2","name":"Mason McClurg","hcp":9},{"id":"p3","name":"Miles McClurg","hcp":14.5},{"id":"p4","name":"Eli Hadden","hcp":8},{"id":"p5","name":"Cole Barhorst","hcp":20},{"id":"p6","name":"Cade Beam","hcp":9.5},{"id":"p7","name":"Seth Clayton","hcp":13},{"id":"p8","name":"Cade Gingerich","hcp":17}],"subs":[{"id":"s1794265527467","name":"Owen","hcp":7}],"start":"2026-11-09","weeks":[{"n":1,"done":true,"teams":[{"slots":["p2","p1"],"fill":[null,null],"gross":46,"hcp":5.7},{"slots":["p8","p5"],"fill":["s1794265527467",null],"gross":44,"hcp":6.1},{"slots":["p7","p6"],"fill":[null,null],"gross":46,"hcp":5.45},{"slots":["p4","p3"],"fill":[null,null],"gross":42,"hcp":5.3}]},{"n":2,"done":false,"teams":[{"slots":["p2","p8"],"fill":[null,null],"gross":null,"hcp":null},{"slots":["p7","p1"],"fill":[null,null],"gross":null,"hcp":null},{"slots":["p4","p5"],"fill":[null,null],"gross":null,"hcp":null},{"slots":["p3","p6"],"fill":[null,null],"gross":null,"hcp":null}]},{"n":3,"done":false,"teams":[{"slots":["p2","p7"],"fill":[null,null],"gross":null,"hcp":null},{"slots":["p4","p8"],"fill":[null,null],"gross":null,"hcp":null},{"slots":["p3","p1"],"fill":[null,null],"gross":null,"hcp":null},{"slots":["p6","p5"],"fill":[null,null],"gross":null,"hcp":null}]},{"n":4,"done":false,"teams":[{"slots":["p2","p4"],"fill":[null,null],"gross":null,"hcp":null},{"slots":["p3","p7"],"fill":[null,null],"gross":null,"hcp":null},{"slots":["p6","p8"],"fill":[null,null],"gross":null,"hcp":null},{"slots":["p5","p1"],"fill":[null,null],"gross":null,"hcp":null}]},{"n":5,"done":false,"teams":[{"slots":["p2","p3"],"fill":[null,null],"gross":null,"hcp":null},{"slots":["p6","p4"],"fill":[null,null],"gross":null,"hcp":null},{"slots":["p5","p7"],"fill":[null,null],"gross":null,"hcp":null},{"slots":["p1","p8"],"fill":[null,null],"gross":null,"hcp":null}]},{"n":6,"done":false,"teams":[{"slots":["p2","p6"],"fill":[null,null],"gross":null,"hcp":null},{"slots":["p5","p3"],"fill":[null,null],"gross":null,"hcp":null},{"slots":["p1","p4"],"fill":[null,null],"gross":null,"hcp":null},{"slots":["p8","p7"],"fill":[null,null],"gross":null,"hcp":null}]},{"n":7,"done":false,"teams":[{"slots":["p2","p5"],"fill":[null,null],"gross":null,"hcp":null},{"slots":["p1","p6"],"fill":[null,null],"gross":null,"hcp":null},{"slots":["p8","p3"],"fill":[null,null],"gross":null,"hcp":null},{"slots":["p7","p4"],"fill":[null,null],"gross":null,"hcp":null}]}],"holes":9,"fmt":"6040","exactHcp":true};
 const seed=()=>JSON.parse(JSON.stringify(SEED));
-let S;try{S=JSON.parse(localStorage.getItem(KEY))||seed()}catch(e){S=seed()}
+let S=seed(),PUB=null;
+function prep(){
 // Migration: older saves had no hole setting. Default to 9 holes and re-lock any finalized weeks with the 9-hole math. Rosters and scores are untouched.
 if(S.holes==null){S.holes=9;(S.weeks||[]).forEach(w=>{if(w.done)w.teams.forEach(t=>t.hcp=null)});}
 // Migration: switch to 60/40 team allowance. Finalized weeks get re-locked with the new math; rosters, schedule and gross scores are untouched.
 if(S.fmt==null){S.fmt='6040';(S.weeks||[]).forEach(w=>{if(w.done)w.teams.forEach(t=>t.hcp=null)});}
 // Migration: team handicaps are no longer rounded. Finalized weeks get re-locked with exact decimals; rosters, schedule and gross scores are untouched.
 if(!S.exactHcp){S.exactHcp=true;(S.weeks||[]).forEach(w=>{if(w.done)w.teams.forEach(t=>t.hcp=null)});}
-let ui={tab:'roster',week:0};
-try{ui.tab=localStorage.getItem(KEY+'.tab')||'roster'}catch(e){}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S));localStorage.setItem(KEY+'.tab',ui.tab)}catch(e){}}
+S.subs=S.subs||[];S.weeks=S.weeks||[];
+}
+let ui={tab:ADMIN?'roster':'board',week:0};
+if(ADMIN)try{ui.tab=localStorage.getItem(KEY+'.tab')||'roster'}catch(e){}
+function save(){if(!ADMIN)return;try{localStorage.setItem(KEY,JSON.stringify(S));localStorage.setItem(KEY+'.tab',ui.tab)}catch(e){}}
 const g=id=>S.players.find(p=>p.id===id)||S.subs.find(p=>p.id===id);
 const nm=id=>g(id)?.name??'(removed)';
 const hc=id=>Number(g(id)?.hcp)||0;
@@ -93,7 +100,7 @@ function hcpMath(t){const h=pHcps(t),lo=Math.min(...h),hi=Math.max(...h),pre=S.h
     :`${pre}60% × ${fmt(lo)} + 40% × ${fmt(hi)} = ${fmt(calcHcp(t))}`;}
 function teamHcp(w,t){if(w.done&&t.hcp!=null)return t.hcp;return calcHcp(t);}
 // Locked weeks missing a stored handicap (from migration) get one now
-{let mig=false;S.weeks.forEach(w=>{if(w.done)w.teams.forEach(t=>{if(t.hcp==null){t.hcp=calcHcp(t);mig=true}})});if(mig)save();}
+function lockMissing(){let mig=false;S.weeks.forEach(w=>{if(w.done)w.teams.forEach(t=>{if(t.hcp==null){t.hcp=calcHcp(t);mig=true}})});if(mig)save();}
 // Show up to 2 decimals, trimming trailing zeros (4.75, 4.8, 5)
 const fmt=(x,d=2)=>x==null?'—':String(Number(x.toFixed(d)));
 function addDays(start,days){if(!start)return'';const[y,m,d]=start.split('-').map(Number);return new Date(y,m-1,d+days).toLocaleDateString(undefined,{weekday:'short',month:'short',day:'numeric'});}
@@ -142,11 +149,27 @@ function render(){
   document.title=S.name;
   document.getElementById('nav').innerHTML=TABS.map(([k,l])=>`<button class="${ui.tab===k?'on':''}" onclick="go('${k}')">${l}</button>`).join('');
   const app=document.getElementById('app');
-  app.innerHTML={roster,schedule,scores,board}[ui.tab]();
+  app.innerHTML=(ADMIN?adminBar():'')+{roster,schedule,scores,board}[ui.tab]();
 }
+function adminBar(){
+  const dirty=PUB&&JSON.stringify(PUB)!==JSON.stringify(S);
+  return `<div class="card toolbar" style="border-color:var(--accent2)"><span class="pill sub">Admin</span>
+  <span class="small">${dirty?'You have changes visitors can\'t see yet.':'Matches the published site.'}</span><span style="flex:1"></span>
+  <button class="btn primary" onclick="publishData()">Download data.json to publish</button>
+  <button class="btn" onclick="loadPublished()">Load published data</button></div>`;
+}
+function publishData(){const b=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='data.json';a.click()}
+function loadPublished(){if(!PUB){alert('Could not load data.json from the site.');return}
+  if(!confirm('Replace the data in this browser with what visitors currently see?'))return;
+  S=JSON.parse(JSON.stringify(PUB));prep();lockMissing();save();render()}
 function go(t){ui.tab=t;save();render();window.scrollTo(0,0)}
 
 function roster(){
+  if(!ADMIN){const row=p=>`<tr><td>${esc(p.name)}</td><td class="num">${fmt(p.hcp)}</td><td class="num">${fmt(r2(p.hcp*holeFactor()))}</td></tr>`;
+    const head=`<tr><th>Golfer</th><th class="num">18-hole HCP</th><th class="num">${S.holes===18?'Playing':'9-hole'} HCP</th></tr>`;
+    return `<h2>Golfers</h2><div class="card scroll"><table>${head}${S.players.map(row).join('')}</table></div>
+    ${S.subs.length?`<h2>Subs</h2><div class="card scroll"><table>${head}${S.subs.map(row).join('')}</table></div>`:''}
+    <div class="note">Team handicap: ${S.fmt==='50'?'50% of the partners\' combined handicaps':'60% of the lower handicap + 40% of the higher'}, using ${S.holes===18?'18-hole':'9-hole (half of 18-hole)'} handicaps. Net = team gross − team handicap, no rounding.</div>`;}
   return `<h2>League</h2>
   <div class="card toolbar"><label>League name <input class="name" style="width:260px" value="${esc(S.name)}" onchange="S.name=this.value;save();render()"></label>
   <label>Holes per match <select onchange="S.holes=+this.value;save();render()"><option value="9" ${S.holes!==18?'selected':''}>9</option><option value="18" ${S.holes===18?'selected':''}>18</option></select></label>
@@ -179,13 +202,13 @@ function resetAll(){if(confirm('Erase all golfers, schedule and scores?')){S=fre
 function schedule(){
   const has=S.weeks.length;
   return `<h2>Schedule</h2>
-  <div class="card toolbar">
+  ${!ADMIN?'':`<div class="card toolbar">
     <label>First week <input type="date" value="${S.start}" onchange="S.start=this.value;save();render()"></label>
     <label>Weeks <input type="number" id="nw" min="1" max="28" value="${has||7}"></label>
     <label><input type="checkbox" id="rnd" checked> Randomize pairings</label>
     <button class="btn primary" onclick="makeSched()">${has?'Rebuild schedule':'Build schedule'}</button>
     ${has?'<button class="btn" onclick="window.print()">Print</button>':''}
-  </div>
+  </div>`}
   <div class="note">One match per week: all 4 two-man teams play alternate shot. With 8 golfers, 7 weeks gives every golfer a different partner each week — everyone partners everyone exactly once. Seasons longer than 7 weeks repeat the rotation.</div>
   ${has?`<div class="grid">${S.weeks.map((w,wi)=>`<div class="card">
     <h3 style="margin:0 0 8px;font-size:15px;display:flex;justify-content:space-between">Week ${w.n} <span class="muted small">${addDays(S.start,7*wi)} ${w.done?'<span class="pill done">Final</span>':''}</span></h3>
@@ -205,6 +228,7 @@ function scores(){
   const used=new Set(w.teams.flatMap(t=>t.fill.filter(Boolean)));
   const allIn=w.teams.every(t=>t.gross!=null);
   const res=allIn?w.teams.map((t,ti)=>({ti,t,h:teamHcp(w,t),net:r2(t.gross-teamHcp(w,t))})).sort((a,b)=>a.net-b.net):[];
+  if(!ADMIN)return resultsView(wi,w,allIn,res);
   return `<h2>Enter scores</h2>
   <div class="weeks">${S.weeks.map((x,i)=>`<button class="btn ${i===wi?'on':''} ${x.done?'primary':''}" onclick="ui.week=${i};render()">W${x.n}</button>`).join('')}</div>
   <div class="card toolbar"><b>Week ${w.n}</b><span class="muted">${addDays(S.start,7*wi)}</span>${w.done?'<span class="pill done">Final</span>':'<span class="pill">Open</span>'}
@@ -223,6 +247,20 @@ function scores(){
   </div>`}).join('')}</div>
   ${allIn?`<h2>Week ${w.n} results</h2><div class="card scroll"><table><tr><th>Place</th><th>Team</th><th>Golfers</th><th class="num">Gross</th><th class="num">HCP</th><th class="num">Net</th></tr>
   ${res.map((r,i)=>`<tr class="${i===0||r.net===res[0].net?'rank1':''}"><td>${res.findIndex(x=>x.net===r.net)+1}</td><td>${TEAM[r.ti]}</td><td>${actual(r.t).map(id=>esc(nm(id))).join(' &amp; ')}</td><td class="num">${r.t.gross}</td><td class="num">${fmt(r.h)}</td><td class="num"><b>${fmt(r.net)}</b></td></tr>`).join('')}</table></div>`:''}`;
+}
+function resultsTable(w,res){return `<div class="card scroll"><table><tr><th>Place</th><th>Team</th><th>Golfers</th><th class="num">Gross</th><th class="num">HCP</th><th class="num">Net</th></tr>
+  ${res.map((r,i)=>`<tr class="${r.net===res[0].net?'rank1':''}"><td>${res.findIndex(x=>x.net===r.net)+1}</td><td>${TEAM[r.ti]}</td><td>${actual(r.t).map(id=>esc(nm(id))).join(' &amp; ')}</td><td class="num">${r.t.gross}</td><td class="num">${fmt(r.h)}</td><td class="num"><b>${fmt(r.net)}</b></td></tr>`).join('')}</table></div>`}
+function resultsView(wi,w,allIn,res){
+  return `<h2>Results</h2>
+  <div class="weeks">${S.weeks.map((x,i)=>`<button class="btn ${i===wi?'on':''} ${x.done?'primary':''}" onclick="ui.week=${i};render()">W${x.n}</button>`).join('')}</div>
+  <div class="card toolbar"><b>Week ${w.n}</b><span class="muted">${addDays(S.start,7*wi)}</span>${w.done?'<span class="pill done">Final</span>':'<span class="pill">Upcoming</span>'}</div>
+  ${w.done&&allIn?resultsTable(w,res):''}
+  <div class="grid">${w.teams.map((t,ti)=>{const h=teamHcp(w,t);return `<div class="card team">
+    <h3>Team ${TEAM[ti]} <span class="pill">Team HCP ${fmt(h)}</span></h3>
+    ${t.slots.map((id,si)=>`<div class="slot"><span>${esc(nm(t.fill[si]||id))}${t.fill[si]?` <span class="pill sub">sub for ${esc(nm(id))}</span>`:''}</span><span class="muted small">HCP ${fmt(hc(t.fill[si]||id))}</span></div>`).join('')}
+    <p class="muted small" style="margin:6px 0 0">${hcpMath(t)}</p>
+    ${w.done&&t.gross!=null?`<div class="score"><span>Gross <b>${t.gross}</b></span><span>Net <span class="big">${fmt(t.gross-h)}</span></span></div>`:''}
+  </div>`}).join('')}</div>`;
 }
 function setFill(wi,ti,si,v){S.weeks[wi].teams[ti].fill[si]=v||null;save();render()}
 function setGross(wi,ti,v){const n=parseInt(v);S.weeks[wi].teams[ti].gross=isNaN(n)?null:n;save();render()}
@@ -243,7 +281,16 @@ function board(){
   ${done.length?`<h2>Week by week (net)</h2><div class="card scroll"><table><tr><th>Golfer</th>${done.map(w=>`<th class="num">W${w.n}</th>`).join('')}</tr>
   ${reg.map(r=>`<tr><td>${esc(r.p.name)}</td>${done.map(w=>{const v=r.byWeek[w.n];return `<td class="num">${v==='SUB'?'<span class="pill sub">out</span>':fmt(v)}</td>`}).join('')}</tr>`).join('')}</table></div>`:''}`;
 }
-render();
+async function boot(){
+  try{const r=await fetch('data.json?v='+Date.now(),{cache:'no-store'});if(r.ok)PUB=await r.json()}catch(e){}
+  if(PUB)S=JSON.parse(JSON.stringify(PUB));
+  if(ADMIN){try{const d=JSON.parse(localStorage.getItem(KEY));if(d)S=d}catch(e){}}
+  prep();lockMissing();
+  const last=S.weeks.map(w=>w.done).lastIndexOf(true);
+  ui.week=ADMIN?Math.min(last+1,Math.max(S.weeks.length-1,0)):Math.max(last,0);
+  render();
+}
+boot();
 </script>
 </body>
 </html>

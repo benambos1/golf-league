@@ -1,0 +1,436 @@
+{
+  "name": "Sim Golf League",
+  "players": [
+    {
+      "id": "p1",
+      "name": "Ben Ambos",
+      "hcp": 15
+    },
+    {
+      "id": "p2",
+      "name": "Mason McClurg",
+      "hcp": 9
+    },
+    {
+      "id": "p3",
+      "name": "Miles McClurg",
+      "hcp": 14.5
+    },
+    {
+      "id": "p4",
+      "name": "Eli Hadden",
+      "hcp": 8
+    },
+    {
+      "id": "p5",
+      "name": "Cole Barhorst",
+      "hcp": 20
+    },
+    {
+      "id": "p6",
+      "name": "Cade Beam",
+      "hcp": 9.5
+    },
+    {
+      "id": "p7",
+      "name": "Seth Clayton",
+      "hcp": 13
+    },
+    {
+      "id": "p8",
+      "name": "Cade Gingerich",
+      "hcp": 17
+    }
+  ],
+  "subs": [
+    {
+      "id": "s1794265527467",
+      "name": "Owen",
+      "hcp": 7
+    }
+  ],
+  "start": "2026-11-09",
+  "weeks": [
+    {
+      "n": 1,
+      "done": true,
+      "teams": [
+        {
+          "slots": [
+            "p2",
+            "p1"
+          ],
+          "fill": [
+            null,
+            null
+          ],
+          "gross": 46,
+          "hcp": 5.7
+        },
+        {
+          "slots": [
+            "p8",
+            "p5"
+          ],
+          "fill": [
+            "s1794265527467",
+            null
+          ],
+          "gross": 44,
+          "hcp": 6.1
+        },
+        {
+          "slots": [
+            "p7",
+            "p6"
+          ],
+          "fill": [
+            null,
+            null
+          ],
+          "gross": 46,
+          "hcp": 5.45
+        },
+        {
+          "slots": [
+            "p4",
+            "p3"
+          ],
+          "fill": [
+            null,
+            null
+          ],
+          "gross": 42,
+          "hcp": 5.3
+        }
+      ]
+    },
+    {
+      "n": 2,
+      "done": false,
+      "teams": [
+        {
+          "slots": [
+            "p2",
+            "p8"
+          ],
+          "fill": [
+            null,
+            null
+          ],
+          "gross": null,
+          "hcp": null
+        },
+        {
+          "slots": [
+            "p7",
+            "p1"
+          ],
+          "fill": [
+            null,
+            null
+          ],
+          "gross": null,
+          "hcp": null
+        },
+        {
+          "slots": [
+            "p4",
+            "p5"
+          ],
+          "fill": [
+            null,
+            null
+          ],
+          "gross": null,
+          "hcp": null
+        },
+        {
+          "slots": [
+            "p3",
+            "p6"
+          ],
+          "fill": [
+            null,
+            null
+          ],
+          "gross": null,
+          "hcp": null
+        }
+      ]
+    },
+    {
+      "n": 3,
+      "done": false,
+      "teams": [
+        {
+          "slots": [
+            "p2",
+            "p7"
+          ],
+          "fill": [
+            null,
+            null
+          ],
+          "gross": null,
+          "hcp": null
+        },
+        {
+          "slots": [
+            "p4",
+            "p8"
+          ],
+          "fill": [
+            null,
+            null
+          ],
+          "gross": null,
+          "hcp": null
+        },
+        {
+          "slots": [
+            "p3",
+            "p1"
+          ],
+          "fill": [
+            null,
+            null
+          ],
+          "gross": null,
+          "hcp": null
+        },
+        {
+          "slots": [
+            "p6",
+            "p5"
+          ],
+          "fill": [
+            null,
+            null
+          ],
+          "gross": null,
+          "hcp": null
+        }
+      ]
+    },
+    {
+      "n": 4,
+      "done": false,
+      "teams": [
+        {
+          "slots": [
+            "p2",
+            "p4"
+          ],
+          "fill": [
+            null,
+            null
+          ],
+          "gross": null,
+          "hcp": null
+        },
+        {
+          "slots": [
+            "p3",
+            "p7"
+          ],
+          "fill": [
+            null,
+            null
+          ],
+          "gross": null,
+          "hcp": null
+        },
+        {
+          "slots": [
+            "p6",
+            "p8"
+          ],
+          "fill": [
+            null,
+            null
+          ],
+          "gross": null,
+          "hcp": null
+        },
+        {
+          "slots": [
+            "p5",
+            "p1"
+          ],
+          "fill": [
+            null,
+            null
+          ],
+          "gross": null,
+          "hcp": null
+        }
+      ]
+    },
+    {
+      "n": 5,
+      "done": false,
+      "teams": [
+        {
+          "slots": [
+            "p2",
+            "p3"
+          ],
+          "fill": [
+            null,
+            null
+          ],
+          "gross": null,
+          "hcp": null
+        },
+        {
+          "slots": [
+            "p6",
+            "p4"
+          ],
+          "fill": [
+            null,
+            null
+          ],
+          "gross": null,
+          "hcp": null
+        },
+        {
+          "slots": [
+            "p5",
+            "p7"
+          ],
+          "fill": [
+            null,
+            null
+          ],
+          "gross": null,
+          "hcp": null
+        },
+        {
+          "slots": [
+            "p1",
+            "p8"
+          ],
+          "fill": [
+            null,
+            null
+          ],
+          "gross": null,
+          "hcp": null
+        }
+      ]
+    },
+    {
+      "n": 6,
+      "done": false,
+      "teams": [
+        {
+          "slots": [
+            "p2",
+            "p6"
+          ],
+          "fill": [
+            null,
+            null
+          ],
+          "gross": null,
+          "hcp": null
+        },
+        {
+          "slots": [
+            "p5",
+            "p3"
+          ],
+          "fill": [
+            null,
+            null
+          ],
+          "gross": null,
+          "hcp": null
+        },
+        {
+          "slots": [
+            "p1",
+            "p4"
+          ],
+          "fill": [
+            null,
+            null
+          ],
+          "gross": null,
+          "hcp": null
+        },
+        {
+          "slots": [
+            "p8",
+            "p7"
+          ],
+          "fill": [
+            null,
+            null
+          ],
+          "gross": null,
+          "hcp": null
+        }
+      ]
+    },
+    {
+      "n": 7,
+      "done": false,
+      "teams": [
+        {
+          "slots": [
+            "p2",
+            "p5"
+          ],
+          "fill": [
+            null,
+            null
+          ],
+          "gross": null,
+          "hcp": null
+        },
+        {
+          "slots": [
+            "p1",
+            "p6"
+          ],
+          "fill": [
+            null,
+            null
+          ],
+          "gross": null,
+          "hcp": null
+        },
+        {
+          "slots": [
+            "p8",
+            "p3"
+          ],
+          "fill": [
+            null,
+            null
+          ],
+          "gross": null,
+          "hcp": null
+        },
+        {
+          "slots": [
+            "p7",
+            "p4"
+          ],
+          "fill": [
+            null,
+            null
+          ],
+          "gross": null,
+          "hcp": null
+        }
+      ]
+    }
+  ],
+  "holes": 9,
+  "fmt": "6040",
+  "exactHcp": true
+}

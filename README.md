@@ -12,4 +12,6 @@ Scoring tracker for a 9-hole simulator golf league: 8 golfers plus subs, 2-man a
 - Team allowance (WHS Appendix C): 60% of the low handicap + 40% of the high (Greensomes / Chapman), or 50% of combined for straight alternate shot
 
 ## Data
-A single self-contained `index.html`. Data saves in the browser's localStorage, so it stays on one device. Use **Download backup** / **Restore from backup** on the Roster tab to move it.
+- `data.json` holds the published league: roster, schedule and scores. Visitors see it read-only.
+- **Admin:** open the site with `#admin` at the end of the address. Edits save in that browser only. When ready, click **Download data.json to publish** and replace `data.json` in this repo. The site updates on the next deploy.
+- Anyone can open `#admin`, but their edits stay in their own browser and never reach the published site.
