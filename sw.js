@@ -1,6 +1,6 @@
 // Network-first: always try to get the latest app and scores, and fall back to the
 // last saved copy only when offline. Bump VERSION when changing the files below.
-const VERSION = 'golf-league-v1';
+const VERSION = 'golf-league-v2';
 const SHELL = ['./', 'index.html', 'data.json', 'manifest.webmanifest',
   'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png'];
 

@@ -91,7 +91,7 @@ S.subs=S.subs||[];S.weeks=S.weeks||[];
 }
 let ui={tab:ADMIN?'roster':'board',week:0};
 if(ADMIN)try{ui.tab=localStorage.getItem(KEY+'.tab')||'roster'}catch(e){}
-function save(){if(!ADMIN)return;try{localStorage.setItem(KEY,JSON.stringify(S));localStorage.setItem(KEY+'.tab',ui.tab)}catch(e){}}
+function save(){if(!ADMIN)return;try{localStorage.setItem(KEY,JSON.stringify(S));localStorage.setItem(KEY+'.tab',ui.tab)}catch(e){}schedulePublish()}
 const g=id=>S.players.find(p=>p.id===id)||S.subs.find(p=>p.id===id);
 const nm=id=>g(id)?.name??'(removed)';
 const hc=id=>Number(g(id)?.hcp)||0;
@@ -162,17 +162,42 @@ function render(){
   updLine();
   app.innerHTML=(ADMIN?adminBar():'')+{roster,schedule,scores,board}[ui.tab]();
 }
-function adminBar(){
-  const dirty=PUB&&JSON.stringify(PUB)!==JSON.stringify(S);
-  return `<div class="card toolbar" style="border-color:var(--accent2)"><span class="pill sub">Admin</span>
-  <span class="small">${dirty?'You have changes visitors can\'t see yet.':'Matches the published site.'}</span><span style="flex:1"></span>
-  <button class="btn primary" onclick="publishData()">Download data.json to publish</button>
-  <button class="btn" onclick="loadPublished()">Load published data</button></div>`;
+// ---------- publishing (admin) ----------
+// Every admin change is saved in this browser and published to /api/league ~1s later.
+// Visitors' apps read /api/league, so changes are live as soon as "Live" shows.
+let pubStr=null,pubState='idle',pubAt=null,pubErr='',pubTimer=null;
+const isDirty=()=>pubStr!==JSON.stringify(S);
+function getPin(force){let pin=null;try{pin=localStorage.getItem(KEY+'.pin')}catch(e){}
+  if(!pin||force){pin=prompt('Admin PIN to publish scores:');if(!pin)return null;try{localStorage.setItem(KEY+'.pin',pin.trim())}catch(e){}}
+  return pin.trim()}
+function schedulePublish(){if(!isDirty()){if(pubState!=='busy'){pubState='idle';render()}return}
+  clearTimeout(pubTimer);pubState='pending';pubTimer=setTimeout(publish,1000)}
+async function publish(){
+  clearTimeout(pubTimer);if(!isDirty()){pubState='idle';render();return}
+  const pin=getPin(false);if(!pin){pubState='error';pubErr='No PIN entered';render();return}
+  pubState='busy';render();const body=JSON.stringify(S);
+  try{const r=await fetch('api/league',{method:'PUT',headers:{'Content-Type':'application/json','x-admin-pin':pin},body});
+    if(r.status===401){try{localStorage.removeItem(KEY+'.pin')}catch(e){}pubState='error';pubErr='Wrong PIN';render();return}
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    pubStr=body;PUB=JSON.parse(body);pubAt=new Date();pubState=isDirty()?'pending':'idle';pubErr='';
+    if(pubState==='pending')schedulePublish();render();
+  }catch(e){pubState='error';pubErr=navigator.onLine?'Couldn\'t reach the site':'You\'re offline';render()}
 }
-function publishData(){const b=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='data.json';a.click()}
-function loadPublished(){if(!PUB){alert('Could not load data.json from the site.');return}
-  if(!confirm('Replace the data in this browser with what visitors currently see?'))return;
-  S=JSON.parse(JSON.stringify(PUB));prep();lockMissing();save();render()}
+window.addEventListener('online',()=>{if(ADMIN&&isDirty())publish()});
+function adminBar(){
+  const t=d=>d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+  const msg=pubState==='busy'?'Publishing…':pubState==='pending'?'Saving…':pubState==='error'?`<b style="color:var(--bad)">Not published: ${esc(pubErr)}</b>`
+    :isDirty()?'<b>Changes not published yet</b>':`<b style="color:var(--accent)">● Live</b> — everyone sees this${pubAt?' (published '+t(pubAt)+')':''}`;
+  return `<div class="card toolbar" style="border-color:var(--accent2)"><span class="pill sub">Admin</span>
+  <span class="small">${msg}</span><span style="flex:1"></span>
+  ${pubState==='error'&&pubErr==='Wrong PIN'?'<button class="btn primary" onclick="getPin(true)&&publish()">Enter PIN</button>':''}
+  ${isDirty()&&pubState!=='busy'?'<button class="btn primary" onclick="publish()">Publish now</button>':''}
+  ${isDirty()?'<button class="btn" onclick="loadPublished()">Discard changes</button>':''}</div>`;
+}
+function loadPublished(){if(!PUB){alert('Could not load the published league.');return}
+  if(!confirm('Throw away the changes in this browser and go back to what everyone currently sees?'))return;
+  clearTimeout(pubTimer);S=JSON.parse(JSON.stringify(PUB));prep();lockMissing();pubStr=JSON.stringify(S);pubState='idle';
+  try{localStorage.setItem(KEY,pubStr)}catch(e){}render()}
 function go(t){ui.tab=t;save();render();window.scrollTo(0,0)}
 
 function roster(){
@@ -201,7 +226,7 @@ function roster(){
   <div class="card toolbar"><button class="btn" onclick="exportData()">Download backup (.json)</button>
   <button class="btn" onclick="document.getElementById('importFile').click()">Restore from backup</button>
   <button class="btn danger" onclick="resetAll()">Reset everything</button>
-  <span class="muted small">Data lives in this browser only — download a backup now and then.</span></div>`;
+  <span class="muted small">Changes publish to everyone automatically. A backup file is handy now and then.</span></div>`;
 }
 function setP(list,i,k,v){S[list][i][k]=k==='hcp'?(parseFloat(v)||0):v;save();render()}
 function addSub(){S.subs.push({id:'s'+Date.now(),name:'Sub '+(S.subs.length+1),hcp:0});save();render()}
@@ -294,7 +319,9 @@ function board(){
 }
 let fetchedAt=null,loading=false;
 async function loadPub(){
-  try{const r=await fetch('data.json?v='+Date.now(),{cache:'no-store'});if(r.ok){PUB=await r.json();fetchedAt=new Date();return true}}catch(e){}
+  for(const u of ['api/league','data.json']){
+    try{const r=await fetch(u+'?v='+Date.now(),{cache:'no-store'});if(r.ok){PUB=await r.json();fetchedAt=new Date();return true}}catch(e){}
+  }
   return false;
 }
 function updLine(){const el=document.getElementById('upd');if(!el)return;
@@ -308,12 +335,16 @@ async function refresh(){
     const nowDone=S.weeks.map(w=>w.done).lastIndexOf(true);ui.week=nowDone>lastDone?Math.max(nowDone,0):Math.min(keep,Math.max(S.weeks.length-1,0));}
   render();
 }
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')refresh()});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!ADMIN)refresh()});
+// While a visitor has the app open, check for new scores every 30 seconds
+setInterval(()=>{if(!ADMIN&&document.visibilityState==='visible')refresh()},30000);
 async function boot(){
   await loadPub();
   if(PUB)S=JSON.parse(JSON.stringify(PUB));
-  if(ADMIN){try{const d=JSON.parse(localStorage.getItem(KEY));if(d)S=d}catch(e){}}
-  prep();lockMissing();
+  prep();lockMissing();pubStr=JSON.stringify(S);
+  // Admin: keep any unpublished changes from this browser
+  if(ADMIN){try{const d=JSON.parse(localStorage.getItem(KEY));if(d){S=d;prep();lockMissing()}}catch(e){}
+    if(isDirty())pubState='idle';}
   const last=S.weeks.map(w=>w.done).lastIndexOf(true);
   ui.week=ADMIN?Math.min(last+1,Math.max(S.weeks.length-1,0)):Math.max(last,0);
   render();
