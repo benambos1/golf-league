@@ -318,10 +318,10 @@ function reopen(wi){const w=S.weeks[wi];w.done=false;w.teams.forEach(t=>t.hcp=nu
 function board(){
   const st=stats(),reg=ranked(st.filter(r=>!r.p.isSub)),subs=ranked(st.filter(r=>r.p.isSub&&r.n));
   const done=S.weeks.filter(w=>w.done);
-  const tbl=list=>`<div class="card scroll"><table><tr><th>Rank</th><th>Golfer</th><th class="num">HCP</th><th class="num">Rounds</th><th class="num">Total Gross</th><th class="num">Avg Gross</th><th class="num">Total Net</th><th class="num">Bonus</th><th class="num">Final Net</th><th class="num">Avg Final</th><th class="num">Best Final</th></tr>
-  ${list.map(r=>`<tr class="${r.rank===1?'rank1':''}"><td>${r.rank}</td><td>${esc(r.p.name)}</td><td class="num">${r.p.hcp}</td><td class="num">${r.n}</td><td class="num">${r.n?r.tg:'—'}</td><td class="num">${fmt(r.ag)}</td><td class="num">${r.n?fmt(r.tn):'—'}</td><td class="num">${r.n?sgn(r.tb):'—'}</td><td class="num">${r.n?fmt(r.ta):'—'}</td><td class="num"><b>${fmt(r.an)}</b></td><td class="num">${fmt(r.best)}</td></tr>`).join('')}</table></div>`;
+  const tbl=list=>`<div class="card scroll"><table><tr><th>Rank</th><th>Golfer</th><th class="num">HCP</th><th class="num">Rounds</th><th class="num">Total Gross</th><th class="num">Avg Gross</th><th class="num">Total Net</th><th class="num">Bonus</th><th class="num">Final Net</th><th class="num">Score</th></tr>
+  ${list.map(r=>`<tr class="${r.rank===1?'rank1':''}"><td>${r.rank}</td><td>${esc(r.p.name)}</td><td class="num">${r.p.hcp}</td><td class="num">${r.n}</td><td class="num">${r.n?r.tg:'—'}</td><td class="num">${fmt(r.ag)}</td><td class="num">${r.n?fmt(r.tn):'—'}</td><td class="num">${r.n?sgn(r.tb):'—'}</td><td class="num">${r.n?fmt(r.ta):'—'}</td><td class="num"><b>${fmt(r.an)}</b></td></tr>`).join('')}</table></div>`;
   return `<h2>Player leaderboard</h2>
-  <div class="note">Ranked by <b>average final net</b> (net minus each week's placement bonus: 1st −4, 2nd −3, 3rd −2, 4th −1; lowest wins), so a golfer who missed a week isn't hurt or helped by the totals. Each golfer is credited with their team's score for the weeks they played. ${done.length} of ${S.weeks.length||0} weeks final.</div>
+  <div class="note">Ranked by <b>Score</b>, lowest is best. Score is each golfer's average final net: team net minus that week's placement bonus (1st −4, 2nd −3, 3rd −2, 4th −1). Because it's an average, missing a week doesn't hurt or help anyone. Each golfer is credited with their team's score for the weeks they played. ${done.length} of ${S.weeks.length||0} weeks final.</div>
   ${tbl(reg)}
   ${subs.length?`<h2>Subs</h2>${tbl(subs)}`:''}
   ${done.length?`<h2>Week by week (final net)</h2><div class="card scroll"><table><tr><th>Golfer</th>${done.map(w=>`<th class="num">W${w.n}</th>`).join('')}</tr>
