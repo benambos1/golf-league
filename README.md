@@ -5,7 +5,8 @@ Scoring tracker for a 9-hole simulator golf league: 8 golfers plus subs, 2-man a
 - **Roster:** golfers and subs with 18-hole course handicaps
 - **Schedule:** 7-week round robin, so every golfer partners every other golfer once
 - **Scores:** enter team gross; net uses the exact (unrounded) team handicap
-- **Leaderboard:** totals and averages per golfer, ranked by average net
+- **Weekly placement bonus:** 1st −4, 2nd −3, 3rd −2, 4th −1 off that week's net. Ties share the better place.
+- **Leaderboard:** totals and averages per golfer, ranked by average final net (net minus bonus)
 
 ## Handicaps
 - 9 holes: each golfer's 18-hole course handicap is halved

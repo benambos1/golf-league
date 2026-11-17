@@ -129,21 +129,30 @@ function genSchedule(n,rand){
   ui.week=0;
 }
 
+// Weekly placement bonus, taken off that week's net: 1st −4, 2nd −3, 3rd −2, 4th −1.
+// Places come from net score. Tied teams share the better place and bonus, and the next place is skipped (1, 1, 3, 4).
+const BONUS=[4,3,2,1];
+function weekResults(w){
+  if(!w.teams.every(t=>t.gross!=null))return [];
+  const res=w.teams.map((t,ti)=>{const h=teamHcp(w,t);return{ti,t,h,net:r2(t.gross-h)}}).sort((a,b)=>a.net-b.net);
+  res.forEach(r=>{r.place=res.findIndex(x=>x.net===r.net)+1;r.bonus=BONUS[r.place-1]??0;r.adj=r2(r.net-r.bonus)});
+  return res;
+}
+const sgn=b=>b?'−'+fmt(b):'0';
 function stats(){
   const rec={};
   [...S.players.map(p=>({...p,isSub:false})),...S.subs.map(p=>({...p,isSub:true}))].forEach(p=>rec[p.id]={p,rounds:[],byWeek:{}});
   S.weeks.forEach(w=>{
     if(!w.done)return;
-    w.teams.forEach(t=>{
-      if(t.gross==null)return;
-      const net=r2(t.gross-teamHcp(w,t));
+    weekResults(w).forEach(({t,net,bonus,adj})=>{
       t.slots.forEach((id,i)=>{if(t.fill[i]&&rec[id])rec[id].byWeek[w.n]='SUB'});
-      actual(t).forEach(id=>{if(!rec[id])return;rec[id].rounds.push({w:w.n,gross:t.gross,net});rec[id].byWeek[w.n]=net});
+      actual(t).forEach(id=>{if(!rec[id])return;rec[id].rounds.push({w:w.n,gross:t.gross,net,bonus,adj});rec[id].byWeek[w.n]=adj});
     });
   });
   return Object.values(rec).map(r=>{
-    const n=r.rounds.length,tg=r.rounds.reduce((a,x)=>a+x.gross,0),tn=r.rounds.reduce((a,x)=>a+x.net,0);
-    return{...r,n,tg,tn,ag:n?tg/n:null,an:n?tn/n:null,best:n?Math.min(...r.rounds.map(x=>x.net)):null};
+    const n=r.rounds.length,sum=k=>r2(r.rounds.reduce((a,x)=>a+x[k],0));
+    const tg=sum('gross'),tn=sum('net'),tb=sum('bonus'),ta=sum('adj');
+    return{...r,n,tg,tn,tb,ta,ag:n?tg/n:null,an:n?ta/n:null,best:n?Math.min(...r.rounds.map(x=>x.adj)):null};
   });
 }
 function ranked(list){
@@ -263,7 +272,7 @@ function scores(){
   const wi=ui.week,w=S.weeks[wi];
   const used=new Set(w.teams.flatMap(t=>t.fill.filter(Boolean)));
   const allIn=w.teams.every(t=>t.gross!=null);
-  const res=allIn?w.teams.map((t,ti)=>({ti,t,h:teamHcp(w,t),net:r2(t.gross-teamHcp(w,t))})).sort((a,b)=>a.net-b.net):[];
+  const res=weekResults(w),bonusOf=ti=>res.find(r=>r.ti===ti);
   if(!ADMIN)return resultsView(wi,w,allIn,res);
   return `<h2>Enter scores</h2>
   <div class="weeks">${S.weeks.map((x,i)=>`<button class="btn ${i===wi?'on':''} ${x.done?'primary':''}" onclick="ui.week=${i};render()">W${x.n}</button>`).join('')}</div>
@@ -280,12 +289,13 @@ function scores(){
     <p class="muted small" style="margin:6px 0 0">${hcpMath(t)}</p>
     <div class="score"><label>Gross <input type="number" ${w.done?'disabled':''} value="${t.gross??''}" onchange="setGross(${wi},${ti},this.value)"></label>
     <span>Net <span class="big">${t.gross!=null?fmt(t.gross-h):'—'}</span></span></div>
+    ${bonusOf(ti)?`<p class="small" style="margin:6px 0 0">Place ${bonusOf(ti).place} bonus ${sgn(bonusOf(ti).bonus)} → final <b>${fmt(bonusOf(ti).adj)}</b></p>`:''}
   </div>`}).join('')}</div>
-  ${allIn?`<h2>Week ${w.n} results</h2><div class="card scroll"><table><tr><th>Place</th><th>Team</th><th>Golfers</th><th class="num">Gross</th><th class="num">HCP</th><th class="num">Net</th></tr>
-  ${res.map((r,i)=>`<tr class="${i===0||r.net===res[0].net?'rank1':''}"><td>${res.findIndex(x=>x.net===r.net)+1}</td><td>${TEAM[r.ti]}</td><td>${actual(r.t).map(id=>esc(nm(id))).join(' &amp; ')}</td><td class="num">${r.t.gross}</td><td class="num">${fmt(r.h)}</td><td class="num"><b>${fmt(r.net)}</b></td></tr>`).join('')}</table></div>`:''}`;
+  ${allIn?`<h2>Week ${w.n} results</h2>${resultsTable(w,res)}`:''}`;
 }
-function resultsTable(w,res){return `<div class="card scroll"><table><tr><th>Place</th><th>Team</th><th>Golfers</th><th class="num">Gross</th><th class="num">HCP</th><th class="num">Net</th></tr>
-  ${res.map((r,i)=>`<tr class="${r.net===res[0].net?'rank1':''}"><td>${res.findIndex(x=>x.net===r.net)+1}</td><td>${TEAM[r.ti]}</td><td>${actual(r.t).map(id=>esc(nm(id))).join(' &amp; ')}</td><td class="num">${r.t.gross}</td><td class="num">${fmt(r.h)}</td><td class="num"><b>${fmt(r.net)}</b></td></tr>`).join('')}</table></div>`}
+function resultsTable(w,res){return `<div class="card scroll"><table><tr><th>Place</th><th>Team</th><th>Golfers</th><th class="num">Gross</th><th class="num">HCP</th><th class="num">Net</th><th class="num">Bonus</th><th class="num">Final</th></tr>
+  ${res.map(r=>`<tr class="${r.place===1?'rank1':''}"><td>${r.place}</td><td>${TEAM[r.ti]}</td><td>${actual(r.t).map(id=>esc(nm(id))).join(' &amp; ')}</td><td class="num">${r.t.gross}</td><td class="num">${fmt(r.h)}</td><td class="num">${fmt(r.net)}</td><td class="num">${sgn(r.bonus)}</td><td class="num"><b>${fmt(r.adj)}</b></td></tr>`).join('')}</table></div>
+  <p class="muted small" style="margin:-6px 0 14px">Placement bonus off net: 1st −4, 2nd −3, 3rd −2, 4th −1. Ties share the better place.</p>`}
 function resultsView(wi,w,allIn,res){
   return `<h2>Results</h2>
   <div class="weeks">${S.weeks.map((x,i)=>`<button class="btn ${i===wi?'on':''} ${x.done?'primary':''}" onclick="ui.week=${i};render()">W${x.n}</button>`).join('')}</div>
@@ -295,7 +305,7 @@ function resultsView(wi,w,allIn,res){
     <h3>Team ${TEAM[ti]} <span class="pill">Team HCP ${fmt(h)}</span></h3>
     ${t.slots.map((id,si)=>`<div class="slot"><span>${esc(nm(t.fill[si]||id))}${t.fill[si]?` <span class="pill sub">sub for ${esc(nm(id))}</span>`:''}</span><span class="muted small">HCP ${fmt(hc(t.fill[si]||id))}</span></div>`).join('')}
     <p class="muted small" style="margin:6px 0 0">${hcpMath(t)}</p>
-    ${w.done&&t.gross!=null?`<div class="score"><span>Gross <b>${t.gross}</b></span><span>Net <span class="big">${fmt(t.gross-h)}</span></span></div>`:''}
+    ${w.done&&t.gross!=null?(r=>`<div class="score"><span>Gross <b>${t.gross}</b></span><span>Net ${fmt(r?r.net:t.gross-h)}</span>${r?`<span>Bonus ${sgn(r.bonus)}</span><span>Final <span class="big">${fmt(r.adj)}</span></span>`:''}</div>`)(res.find(x=>x.ti===ti)):''}
   </div>`}).join('')}</div>`;
 }
 function setFill(wi,ti,si,v){S.weeks[wi].teams[ti].fill[si]=v||null;save();render()}
@@ -308,13 +318,13 @@ function reopen(wi){const w=S.weeks[wi];w.done=false;w.teams.forEach(t=>t.hcp=nu
 function board(){
   const st=stats(),reg=ranked(st.filter(r=>!r.p.isSub)),subs=ranked(st.filter(r=>r.p.isSub&&r.n));
   const done=S.weeks.filter(w=>w.done);
-  const tbl=list=>`<div class="card scroll"><table><tr><th>Rank</th><th>Golfer</th><th class="num">HCP</th><th class="num">Rounds</th><th class="num">Total Gross</th><th class="num">Avg Gross</th><th class="num">Total Net</th><th class="num">Avg Net</th><th class="num">Best Net</th></tr>
-  ${list.map(r=>`<tr class="${r.rank===1?'rank1':''}"><td>${r.rank}</td><td>${esc(r.p.name)}</td><td class="num">${r.p.hcp}</td><td class="num">${r.n}</td><td class="num">${r.n?r.tg:'—'}</td><td class="num">${fmt(r.ag)}</td><td class="num">${r.n?fmt(r.tn):'—'}</td><td class="num"><b>${fmt(r.an)}</b></td><td class="num">${fmt(r.best)}</td></tr>`).join('')}</table></div>`;
+  const tbl=list=>`<div class="card scroll"><table><tr><th>Rank</th><th>Golfer</th><th class="num">HCP</th><th class="num">Rounds</th><th class="num">Total Gross</th><th class="num">Avg Gross</th><th class="num">Total Net</th><th class="num">Bonus</th><th class="num">Final Net</th><th class="num">Avg Final</th><th class="num">Best Final</th></tr>
+  ${list.map(r=>`<tr class="${r.rank===1?'rank1':''}"><td>${r.rank}</td><td>${esc(r.p.name)}</td><td class="num">${r.p.hcp}</td><td class="num">${r.n}</td><td class="num">${r.n?r.tg:'—'}</td><td class="num">${fmt(r.ag)}</td><td class="num">${r.n?fmt(r.tn):'—'}</td><td class="num">${r.n?sgn(r.tb):'—'}</td><td class="num">${r.n?fmt(r.ta):'—'}</td><td class="num"><b>${fmt(r.an)}</b></td><td class="num">${fmt(r.best)}</td></tr>`).join('')}</table></div>`;
   return `<h2>Player leaderboard</h2>
-  <div class="note">Ranked by <b>average net</b> (lowest wins), so a golfer who missed a week isn't hurt or helped by the totals. Each golfer is credited with their team's score for the weeks they played. ${done.length} of ${S.weeks.length||0} weeks final.</div>
+  <div class="note">Ranked by <b>average final net</b> (net minus each week's placement bonus: 1st −4, 2nd −3, 3rd −2, 4th −1; lowest wins), so a golfer who missed a week isn't hurt or helped by the totals. Each golfer is credited with their team's score for the weeks they played. ${done.length} of ${S.weeks.length||0} weeks final.</div>
   ${tbl(reg)}
   ${subs.length?`<h2>Subs</h2>${tbl(subs)}`:''}
-  ${done.length?`<h2>Week by week (net)</h2><div class="card scroll"><table><tr><th>Golfer</th>${done.map(w=>`<th class="num">W${w.n}</th>`).join('')}</tr>
+  ${done.length?`<h2>Week by week (final net)</h2><div class="card scroll"><table><tr><th>Golfer</th>${done.map(w=>`<th class="num">W${w.n}</th>`).join('')}</tr>
   ${reg.map(r=>`<tr><td>${esc(r.p.name)}</td>${done.map(w=>{const v=r.byWeek[w.n];return `<td class="num">${v==='SUB'?'<span class="pill sub">out</span>':fmt(v)}</td>`}).join('')}</tr>`).join('')}</table></div>`:''}`;
 }
 let fetchedAt=null,loading=false;
